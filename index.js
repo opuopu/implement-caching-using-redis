@@ -10,7 +10,7 @@ const {connect, redisClient} = require("./redis");
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
-// redis for caching
+// call redis connect function
 connect()
 
 
@@ -28,6 +28,7 @@ async function getSpeciesData(req, res) {
   let results;
 let isCached  =  false
   try {
+    // check if avilable data on redis in memory server
     const cacheResult  =  await redisClient.get(species)
     if( cacheResult){
         isCached=true
@@ -35,12 +36,15 @@ let isCached  =  false
         console.log("data get from cache server")
     }
     else{
+      // for the first time api hit the database to retrive data
       results = await fetchApiData(species);
       if (results.length === 0) {
         throw "API returned an empty array";
       }
       console.log("data get from api server")
+      // after sucessfully get data from database then set it to redis in memory server for caching
       await redisClient.set(species,JSON.stringify(results),{
+        // implement 1 minute(60 second) system for remove cached data
         EX:60,
         NX:true
       })
